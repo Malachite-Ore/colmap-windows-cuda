@@ -168,7 +168,14 @@ jobs:
             # sources, so it's set via nvcc's own NVCC_APPEND_FLAGS env var
             # rather than a CMake flag, to reach every nvcc invocation
             # regardless of which build system launched it.
-            $env:NVCC_APPEND_FLAGS = "-Xcompiler=/Zc:preprocessor -DCCCL_IGNORE_MSVC_TRADITIONAL_PREPROCESSOR_WARNING -DCCCL_IGNORE_DEPRECATED_CPP_DIALECT"
+            # With both guards suppressed, nvcc's own device-code frontend still
+            # parses CCCL's "namespace cuda::std { ... }" nested-namespace syntax
+            # (C++17) under its default (pre-17) dialect, since nothing tells
+            # nvcc's frontend to target C++17 the way cl.exe-only translation
+            # units get -std:c++17 from CMAKE_CXX_STANDARD. Ceres's manual build
+            # (build_ceres_colmap.ps1) sets this via CMAKE_CUDA_STANDARD=17; here
+            # it's forced directly on nvcc's own command line instead.
+            $env:NVCC_APPEND_FLAGS = "-Xcompiler=/Zc:preprocessor -DCCCL_IGNORE_MSVC_TRADITIONAL_PREPROCESSOR_WARNING -DCCCL_IGNORE_DEPRECATED_CPP_DIALECT -std=c++17"
             # vcpkg sanitizes each port's build environment on Windows for
             # reproducibility, stripping most variables (including the one
             # above) unless explicitly allow-listed here. Without this,
