@@ -160,6 +160,14 @@ jobs:
             # when the host compiler is already supported. CMake reads CUDAFLAGS
             # during CUDA compiler detection.
             $env:CUDAFLAGS = "-allow-unsupported-compiler"
+            # CUDA 13's CCCL headers hard-error (fatal error C1189) when MSVC's
+            # traditional (pre-/Zc:preprocessor) preprocessor is active, which is
+            # cl.exe's default. This bit both Ceres's CUDA kernels (built by
+            # vcpkg, outside our CMake config) and COLMAP's own .cu sources, so
+            # it's set via nvcc's own NVCC_APPEND_FLAGS env var rather than a
+            # CMake flag, to reach every nvcc invocation regardless of which
+            # build system launched it.
+            $env:NVCC_APPEND_FLAGS = "-Xcompiler=/Zc:preprocessor -DCCCL_IGNORE_MSVC_TRADITIONAL_PREPROCESSOR_WARNING"
           }
           cmake .. `
             -GNinja `
