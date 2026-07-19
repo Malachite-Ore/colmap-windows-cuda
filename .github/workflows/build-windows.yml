@@ -168,6 +168,12 @@ jobs:
             # CMake flag, to reach every nvcc invocation regardless of which
             # build system launched it.
             $env:NVCC_APPEND_FLAGS = "-Xcompiler=/Zc:preprocessor -DCCCL_IGNORE_MSVC_TRADITIONAL_PREPROCESSOR_WARNING"
+            # vcpkg sanitizes each port's build environment on Windows for
+            # reproducibility, stripping most variables (including the one
+            # above) unless explicitly allow-listed here. Without this,
+            # NVCC_APPEND_FLAGS never reaches the nvcc/cl.exe processes vcpkg
+            # spawns to build Ceres, even though it's set in this same shell.
+            $env:VCPKG_KEEP_ENV_VARS = "NVCC_APPEND_FLAGS"
           }
           cmake .. `
             -GNinja `
