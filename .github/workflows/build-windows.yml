@@ -116,7 +116,12 @@ jobs:
           # (Thrust/CUB headers, on Windows the subpackage is "thrust", not
           # "cccl"). We avoid a full install to skip the large math/Nsight
           # subpackages COLMAP does not use.
-          sub-packages: '["nvcc", "crt", "nvvm", "thrust", "nvtx", "cudart", "curand", "curand_dev", "nvrtc_dev"]'
+          # cublas(_dev) and cusolver(_dev) are required once vcpkg.json
+          # requests ceres's own "cuda" feature (see vcpkg.json): Ceres's
+          # CUDA dense solver links against CUDA::cublas and CUDA::cusolver,
+          # and CMake's FindCUDAToolkit only creates those imported targets
+          # when the corresponding libraries are actually installed.
+          sub-packages: '["nvcc", "crt", "nvvm", "thrust", "nvtx", "cudart", "curand", "curand_dev", "nvrtc_dev", "cublas", "cublas_dev", "cusolver", "cusolver_dev"]'
           method: 'network'
 
       - name: Setup vcpkg
