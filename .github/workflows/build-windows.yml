@@ -200,11 +200,32 @@ jobs:
 
       - name: Run tests
         shell: pwsh
+        env:
+          # GitHub-hosted Windows runners have the CUDA toolkit (nvcc, cudart,
+          # etc.) installed via Jimver/cuda-toolkit but no physical GPU and no
+          # NVIDIA display driver, so nvcuda.dll is absent. With vcpkg's Ceres
+          # now built with its own "cuda" feature (see vcpkg.json), Ceres's
+          # CUDA solver support performs a device-capability probe from a
+          # static initializer that's pulled into every test binary linking
+          # colmap's core library. On Windows that probe was observed to hang
+          # for the full ctest per-test timeout (1500s) instead of failing
+          # fast, taking down dozens of otherwise-unrelated tests one at a
+          # time. Setting CUDA_VISIBLE_DEVICES to empty short-circuits the
+          # CUDA runtime's device enumeration to "0 devices" immediately,
+          # without touching the (missing) driver, which is the standard
+          # mitigation for CUDA-aware binaries running on driver-less CI
+          # hosts.
+          CUDA_VISIBLE_DEVICES: ""
         run: |
           ./vcpkg/vcpkg.exe integrate install
           cd build
           $EXCLUDED_TESTS = "(feature/sift_test)|(util/opengl_utils_test)|(mvs/gpu_mat_test)"
-          ctest -E ${EXCLUDED_TESTS} --output-on-failure
+          # Short per-test timeout: if CUDA_VISIBLE_DEVICES="" doesn't fully
+          # resolve the hang above, this bounds a full 147-test run to well
+          # under an hour (instead of the default 1500s/test) so a bad run
+          # surfaces the complete list of affected tests in one pass rather
+          # than one newly-discovered hang per multi-hour CI attempt.
+          ctest -E ${EXCLUDED_TESTS} --timeout 120 --output-on-failure
 
       - name: Export package
         if: matrix.config.exportPackage
