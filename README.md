@@ -92,7 +92,7 @@ Only needed if you specifically want GPU-accelerated *sparse* Ceres BA today.
 #### Build Steps
 1. Clone this repository:
    ```powershell
-   git clone https://github.com/Brainrotisreal/colmap-windows-cuda.git
+   git clone https://github.com/Malachite-Ore/colmap-windows-cuda.git
    ```
 2. Run the automated build script (ensure your execution policy allows it):
    ```powershell
