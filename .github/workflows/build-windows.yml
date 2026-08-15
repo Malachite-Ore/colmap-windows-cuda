@@ -19,6 +19,11 @@ jobs:
   build:
     name: ${{ matrix.config.os }} ${{ matrix.config.cmakeBuildType }} ${{ matrix.config.cudaEnabled && 'CUDA' || '' }}
     runs-on: ${{ matrix.config.os }}
+    # Needed by the "Attach package to release" step below, which uploads the
+    # built package as a release asset. Without contents:write the default
+    # GITHUB_TOKEN is read-only and `gh release upload` fails with 403.
+    permissions:
+      contents: write
     strategy:
       matrix:
         config: [
@@ -316,6 +321,27 @@ jobs:
         with:
           name: colmap-x64-windows-nocuda
           path: build/install
+
+      # The upload-artifact steps above publish CI artifacts, which expire and
+      # are NOT attached to releases. Publishing a release therefore produced a
+      # bare tag with no downloadable binary (v1.1.1-windows-cuda is one such
+      # release), and the assets on v1.1.0-windows-cuda had to be attached by
+      # hand. This step closes that gap: on a release event it zips the same
+      # package and uploads it as a release asset.
+      - name: Attach package to release
+        if: ${{ github.event_name == 'release' && matrix.config.exportPackage }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $suffix = if ($${{ matrix.config.cudaEnabled }}) { "cuda" } else { "nocuda" }
+          $zip = "colmap-x64-windows-$suffix.zip"
+          Compress-Archive -Path build/install/* -DestinationPath $zip -CompressionLevel Optimal
+          $mb = [math]::Round((Get-Item $zip).Length / 1MB, 1)
+          Write-Host "Uploading $zip ($mb MB) to release ${{ github.event.release.tag_name }}"
+          # --clobber so re-running on an edited release replaces the asset
+          # instead of failing on a name collision.
+          gh release upload "${{ github.event.release.tag_name }}" $zip --clobber --repo "${{ github.repository }}"
 
       - name: Cleanup compiler cache
         shell: pwsh
